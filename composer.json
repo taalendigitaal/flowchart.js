@@ -1,0 +1,19 @@
+{
+    "name": "taalendigitaal/flowchart.js",
+    "description": "Draws simple SVG flow chart diagrams from textual representation of the diagram",
+    "type": "component",
+    "require": {
+        "robloach/component-installer": "*"
+    },
+    "extra": {
+        "component": {
+            "scripts": [
+                "release/flowchart.js"
+            ],
+            "files": [
+                "release/flowchart.min.js",
+                "release/flowchart.min.map"
+            ]
+        }
+    }
+}
