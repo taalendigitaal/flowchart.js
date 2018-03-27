@@ -1,3 +1,7 @@
+var drawAPI = require('./flowchart.functions');
+var drawLine = drawAPI.drawLine;
+var checkLineIntersection = drawAPI.checkLineIntersection;
+
 function Symbol(chart, options, symbol) {
   this.chart = chart;
   this.group = this.chart.paper.set();
@@ -5,14 +9,16 @@ function Symbol(chart, options, symbol) {
   this.connectedTo = [];
   this.symbolType = options.symbolType;
   this.flowstate = (options.flowstate || 'future');
+  this.lineStyle = (options.lineStyle || {});
+  this.key = (options.key || '');
 
   this.next_direction = options.next && options['direction_next'] ? options['direction_next'] : undefined;
-  
+
   this.text = this.chart.paper.text(0, 0, options.text);
   //Raphael does not support the svg group tag so setting the text node id to the symbol node id plus t
   if (options.key) { this.text.node.id = options.key + 't'; }
   this.text.node.setAttribute('class', this.getAttr('class') + 't');
-  
+
   this.text.attr({
     'text-anchor': 'start',
     'x'          : this.getAttr('text-margin'),
@@ -47,12 +53,12 @@ function Symbol(chart, options, symbol) {
     }
     this.text.attr("text", tempText.substring(1));
   }
-  
+
   this.group.push(this.text);
 
   if (symbol) {
     var tmpMargin = this.getAttr('text-margin');
-    
+
     symbol.attr({
       'fill' : this.getAttr('fill'),
       'stroke' : this.getAttr('element-color'),
@@ -161,7 +167,6 @@ Symbol.prototype.render = function() {
     if (this.next_direction === 'right') {
 
       var rightPoint = this.getRight();
-      var leftPoint = this.next.getLeft();
 
       if (!this.next.isPositioned) {
 
@@ -194,7 +199,6 @@ Symbol.prototype.render = function() {
       }
     } else {
       var bottomPoint = this.getBottom();
-      var topPoint = this.next.getTop();
 
       if (!this.next.isPositioned) {
         this.next.shiftY(this.getY() + this.height + lineLength);
@@ -210,9 +214,9 @@ Symbol.prototype.render = function() {
 Symbol.prototype.renderLines = function() {
   if (this.next) {
     if (this.next_direction) {
-      this.drawLineTo(this.next, '', this.next_direction);
+      this.drawLineTo(this.next, this.getAttr('arrow-text') || '', this.next_direction);
     } else {
-      this.drawLineTo(this.next);
+      this.drawLineTo(this.next, this.getAttr('arrow-text') || '');
     }
   }
 };
@@ -224,22 +228,21 @@ Symbol.prototype.drawLineTo = function(symbol, text, origin) {
 
   var x = this.getCenter().x,
       y = this.getCenter().y,
-      top = this.getTop(),
       right = this.getRight(),
       bottom = this.getBottom(),
+      top = this.getTop(),
       left = this.getLeft();
 
   var symbolX = symbol.getCenter().x,
       symbolY = symbol.getCenter().y,
       symbolTop = symbol.getTop(),
       symbolRight = symbol.getRight(),
-      symbolBottom = symbol.getBottom(),
       symbolLeft = symbol.getLeft();
 
   var isOnSameColumn = x === symbolX,
       isOnSameLine = y === symbolY,
       isUnder = y < symbolY,
-      isUpper = y > symbolY,
+      isUpper = y > symbolY || this === symbol,
       isLeft = x > symbolX,
       isRight = x < symbolX;
 
@@ -358,24 +361,34 @@ Symbol.prototype.drawLineTo = function(symbol, text, origin) {
     maxX = left.x;
   } else if ((origin === 'left')) {
     line = drawLine(this.chart, left, [
-      {x: symbolTop.x + (left.x - symbolTop.x)/ 2, y: left.y},
-      {x: symbolTop.x + (left.x - symbolTop.x)/ 2, y: symbolTop.y - lineLength/2},
+      {x: symbolTop.x + (left.x - symbolTop.x)/2, y: left.y},
+      {x: symbolTop.x + (left.x - symbolTop.x)/2, y: symbolTop.y - lineLength/2},
       {x: symbolTop.x, y: symbolTop.y - lineLength/2},
       {x: symbolTop.x, y: symbolTop.y}
     ], text);
     this.leftStart = true;
     symbol.topEnd = true;
     maxX = left.x;
+  } else if ((origin === 'top')) {
+    line = drawLine(this.chart, top, [
+      {x: top.x, y: symbolTop.y - lineLength/2},
+      {x: symbolTop.x, y: symbolTop.y - lineLength/2},
+      {x: symbolTop.x, y: symbolTop.y}
+    ], text);
+    this.topStart = true;
+    symbol.topEnd = true;
+    maxX = top.x;
+  }
+
+  //update line style
+  if (this.lineStyle[symbol.key] && line){
+      line.attr( this.lineStyle[symbol.key]);
   }
 
   if (line) {
-    var self = this;
     for (var l = 0, llen = this.chart.lines.length; l < llen; l++) {
       var otherLine = this.chart.lines[l];
-      var i,
-          len,
-          intersections,
-          inter;
+      var len;
 
       var ePath = otherLine.attr('path'),
           lPath = line.attr('path');
@@ -448,3 +461,5 @@ Symbol.prototype.drawLineTo = function(symbol, text, origin) {
     this.chart.maxXFromLine = maxX;
   }
 };
+
+module.exports = Symbol;

@@ -1,3 +1,11 @@
+var FlowChart = require('./flowchart.chart');
+var Start = require('./flowchart.symbol.start');
+var End = require('./flowchart.symbol.end');
+var Operation = require('./flowchart.symbol.operation');
+var InputOutput = require('./flowchart.symbol.inputoutput');
+var Subroutine = require('./flowchart.symbol.subroutine');
+var Condition = require('./flowchart.symbol.condition');
+
 function parse(input) {
   input = input || '';
   input = input.trim();
@@ -32,7 +40,7 @@ function parse(input) {
             dispSymbols[s.key] = new Operation(diagram, s);
             break;
           case 'inputoutput':
-            dispSymbols[s.key] = new InputOutput(diagram, s);
+            dispSymbols[s.key] = new InputOutput(diagram, s); 
             break;
           case 'subroutine':
             dispSymbols[s.key] = new Subroutine(diagram, s);
@@ -107,7 +115,7 @@ function parse(input) {
   for (var l = 1, len = lines.length; l < len;) {
     var currentLine = lines[l];
 
-    if (currentLine.indexOf(': ') < 0 && currentLine.indexOf('(') < 0 && currentLine.indexOf(')') < 0 && currentLine.indexOf('->') < 0 && currentLine.indexOf('=>') < 0) {
+    if (currentLine.indexOf('->') < 0 && currentLine.indexOf('=>') < 0 && currentLine.indexOf('@>') < 0) {
       lines[l - 1] += '\n' + currentLine;
       lines.splice(l, 1);
       len--;
@@ -116,11 +124,29 @@ function parse(input) {
     }
   }
 
+  function getStyle(s){
+    var startIndex = s.indexOf('(') + 1;
+    var endIndex = s.indexOf(')');
+    if (startIndex >= 0 && endIndex >= 0) {
+      return s.substring(startIndex,endIndex);
+    }
+    return '{}';
+  }
+
+  function getSymbValue(s){
+    var startIndex = s.indexOf('(') + 1;
+    var endIndex = s.indexOf(')');
+    if (startIndex >= 0 && endIndex >= 0) {
+      return s.substring(startIndex,endIndex);
+    }
+    return '';
+  }
+
   function getSymbol(s) {
     var startIndex = s.indexOf('(') + 1;
     var endIndex = s.indexOf(')');
     if (startIndex >= 0 && endIndex >= 0) {
-      return chart.symbols[s.substring(0, startIndex - 1)];
+      return chart.symbols[s.substring(0, startIndex - 1)];   
     }
     return chart.symbols[s];
   }
@@ -141,36 +167,50 @@ function parse(input) {
   }
 
   while (lines.length > 0) {
-    var line = lines.splice(0, 1)[0];
+    var line = lines.splice(0, 1)[0].trim();
 
     if (line.indexOf('=>') >= 0) {
       // definition
       var parts = line.split('=>');
       var symbol = {
-        key: parts[0],
+        key: parts[0].replace(/\(.*\)/, ''),
         symbolType: parts[1],
         text: null,
         link: null,
         target: null,
-        flowstate: null
+        flowstate: null,
+        lineStyle: {},
+        params: {}
       };
+
+      //parse parameters
+      var params = parts[0].match(/\((.*)\)/);
+      if (params && params.length > 1){
+        var entries = params[1].split(',');
+        for(var i = 0; i < entries.length; i++) {
+          var entry = entries[0].split('=');
+          if (entry.length == 2){
+            symbol.params[entry[0]] = entry[1];
+          }
+        }
+      }
 
       var sub;
 
       if (symbol.symbolType.indexOf(': ') >= 0) {
         sub = symbol.symbolType.split(': ');
-        symbol.symbolType = sub[0];
-        symbol.text = sub[1];
+        symbol.symbolType = sub.shift();
+        symbol.text = sub.join(': ');
       }
 
       if (symbol.text && symbol.text.indexOf(':>') >= 0) {
         sub = symbol.text.split(':>');
-        symbol.text = sub[0];
-        symbol.link = sub[1];
+        symbol.text = sub.shift();
+        symbol.link = sub.join(':>');
       } else if (symbol.symbolType.indexOf(':>') >= 0) {
         sub = symbol.symbolType.split(':>');
-        symbol.symbolType = sub[0];
-        symbol.link = sub[1];
+        symbol.symbolType = sub.shift();
+        symbol.link = sub.join(':>');
       }
 
       if (symbol.symbolType.indexOf('\n') >= 0) {
@@ -192,8 +232,8 @@ function parse(input) {
       if (symbol.text) {
         if (symbol.text.indexOf('|') >= 0) {
           var txtAndState = symbol.text.split('|');
-          symbol.text = txtAndState[0];
-          symbol.flowstate = txtAndState[1].trim();
+          symbol.flowstate = txtAndState.pop().trim();
+          symbol.text = txtAndState.join('|');
         }
       }
       /* end of flowstate support */
@@ -205,6 +245,13 @@ function parse(input) {
       var flowSymbols = line.split('->');
       for (var i = 0, lenS = flowSymbols.length; i < lenS; i++) {
         var flowSymb = flowSymbols[i];
+        var symbVal = getSymbValue(flowSymb);
+
+        if (symbVal === 'true' || symbVal === 'false') {
+          // map true or false to yes or no respectively
+          flowSymb = flowSymb.replace('true', 'yes');
+          flowSymb = flowSymb.replace('false', 'no');
+        }
 
         var realSymb = getSymbol(flowSymb);
         var next = getNextPath(flowSymb);
@@ -227,8 +274,23 @@ function parse(input) {
           direction = null;
         }
       }
+    } else if (line.indexOf('@>') >= 0) {
+
+      // line style
+      var lineStyleSymbols = line.split('@>');
+      for (var i = 0, lenS = lineStyleSymbols.length; i < lenS; i++) {
+
+        if ((i+1) != lenS){
+          var curSymb = getSymbol(lineStyleSymbols[i]);
+          var nextSymb = getSymbol(lineStyleSymbols[i+1]);
+
+          curSymb['lineStyle'][nextSymb.key] = JSON.parse(getStyle(lineStyleSymbols[i+1]));
+        }
+      }
     }
 
   }
   return chart;
 }
+
+module.exports = parse;

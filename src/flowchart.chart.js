@@ -1,9 +1,14 @@
+var Raphael = require('raphael');
+var defaults = require('./flowchart.helpers').defaults;
+var defaultOptions = require('./flowchart.defaults');
+var Condition = require('./flowchart.symbol.condition');
+
 function FlowChart(container, options) {
   options = options || {};
 
   this.paper = new Raphael(container);
 
-  this.options = f.defaults(options, o);
+  this.options = defaults(options, defaultOptions);
 
   this.symbols = [];
   this.lines = [];
@@ -55,7 +60,10 @@ FlowChart.prototype.render = function() {
       len = 0,
       maxX = 0,
       maxY = 0,
-      symbol;
+      minX = 0,
+      minY = 0,
+      symbol,
+      line;
 
   for (i = 0, len = this.symbols.length; i < len; i++) {
     symbol = this.symbols[i];
@@ -86,10 +94,13 @@ FlowChart.prototype.render = function() {
 
   maxX = this.maxXFromLine;
 
+  var x;
+  var y;
+
   for (i = 0, len = this.symbols.length; i < len; i++) {
     symbol = this.symbols[i];
-    var x = symbol.getX() + symbol.width;
-    var y = symbol.getY() + symbol.height;
+    x = symbol.getX() + symbol.width;
+    y = symbol.getY() + symbol.height;
     if (x > maxX) {
       maxX = x;
     }
@@ -98,10 +109,37 @@ FlowChart.prototype.render = function() {
     }
   }
 
+  for (i = 0, len = this.lines.length; i < len; i++) {
+    line = this.lines[i].getBBox();
+    x = line.x;
+    y = line.y;
+    var x2 = line.x2;
+    var y2 = line.y2;
+    if (x < minX) {
+      minX = x;
+    }
+    if (y < minY) {
+      minY = y;
+    }
+    if (x2 > maxX) {
+      maxX = x2;
+    }
+    if (y2 > maxY) {
+      maxY = y2;
+    }
+  }
+
   var scale = this.options['scale'];
   var lineWidth = this.options['line-width'];
-  this.paper.setSize((maxX * scale) + (lineWidth * scale), (maxY * scale) + (lineWidth * scale));
-  this.paper.setViewBox(0, 0, maxX + lineWidth, maxY + lineWidth, true);
+
+  if (minX < 0) minX -= lineWidth;
+  if (minY < 0) minY -= lineWidth;
+
+  var width = maxX + lineWidth - minX;
+  var height = maxY + lineWidth - minY;
+
+  this.paper.setSize(width * scale, height * scale);
+  this.paper.setViewBox(minX, minY, width, height, true);
 };
 
 FlowChart.prototype.clean = function() {
@@ -110,3 +148,5 @@ FlowChart.prototype.clean = function() {
     paperDom.parentNode.removeChild(paperDom);
   }
 };
+
+module.exports = FlowChart;

@@ -1,13 +1,18 @@
 [![JS.ORG](https://img.shields.io/badge/js.org-flowchart-ffb400.svg?style=flat-square)](http://js.org)
 
-#Example
+# flowchart.js
+
+## Example
 
 [example](https://github.com/adrai/flowchart.js/blob/master/example/index.html)
 
-#Requirements
-You will need [Raphaël](http://raphaeljs.com/)
+## Requirements
+You will need [Raphaël](http://www.raphaeljs.com/)
 
-#Usage
+## CDN
+flowchart.js is on [CDNJS](https://cdnjs.com/libraries/flowchart), feel free to use it
+
+## Usage
 
 On your page you need to include raphael like so:
 
@@ -15,27 +20,38 @@ On your page you need to include raphael like so:
 <script src="raphael-min.js"></script>
 ```
 
+or
+
+```node.js
+npm install flowchart.js
+```
+
 and then
 
 ```html
 <div id="diagram">Diagram will be placed here</div>
 <script src="flowchart.js"></script>
-<script> 
-  var diagram = flowchart.parse('st=>start: Start:>http://www.google.com[blank]\n' + 
-                                'e=>end:>http://www.google.com\n' + 
-                                'op1=>operation: My Operation\n' + 
-                                'sub1=>subroutine: My Subroutine\n' + 
-                                'cond=>condition: Yes \n' + 
-                                'or No?\n:>http://www.google.com' + 
-                                'io=>inputoutput|request: catch something...\n' + 
-                                '' +
-                                'st->op1->cond\n' + 
-                                'cond(yes)->io->e\n' + // conditions can also be redirected like cond(yes, bottom) or cond(yes, right)
-                                'cond(no)->sub1(right)->op1');// the other symbols too...
+<script>
+  var diagram = flowchart.parse('st=>start: Start:>http://www.google.com[blank]\n' +
+                                'e=>end:>http://www.google.com\n' +
+                                'op1=>operation: My Operation\n' +
+                                'op2=>operation: Stuff|current\n' +
+                                'sub1=>subroutine: My Subroutine\n' +
+                                'cond=>condition: Yes \n' + // use cond(align-next=no) to disable vertical align of symbols below
+                                'or No?\n:>http://www.google.com\n' +
+                                'c2=>condition: Good idea|rejected\n' +
+                                'io=>inputoutput: catch something...|request\n' +
+                                '\n' +
+                                'st->op1(right)->cond\n' +
+                                'cond(yes, right)->c2\n' + // conditions can also be redirected like cond(yes, bottom) or cond(yes, right)
+                                'cond(no)->sub1(left)->op1\n' + // the other symbols too...
+                                'c2(true)->io->e\n' +
+                                'c2(false)->op2->e'  //allow for true and false in conditionals
+                                );
   diagram.drawSVG('diagram');
 
   // you can also try to pass options:
-  
+
   diagram.drawSVG('diagram', {
                                 'x': 0,
                                 'y': 0,
@@ -76,18 +92,26 @@ and then
 </script>
 ```
 
+## Advice
+Symbols that should possibly not be used in the text: '=>' and '->' and ':>' and '|' and '@>'
 
-#Contributors
+If you want to emphasize a specific path in your flowchart, you can additionally define it like this:
+
+```
+st@>op1({"stroke":"Red"})@>cond({"stroke":"Red","stroke-width":6,"arrow-end":"classic-wide-long"})@>c2({"stroke":"Red"})@>op2({"stroke":"Red"})@>e({"stroke":"Red"})
+```
+
+## Contributors
 
 via [GitHub](https://github.com/adrai/flowchart.js/graphs/contributors)
 
-#Thanks
+## Thanks
 
 Many thanks to [js-sequence-diagrams](http://bramp.github.io/js-sequence-diagrams/) which greatly inspired this project, and forms the basis for the syntax.
 
-#Licence
+## Licence
 
-Copyright (c) 2015 Adriano Raiano
+Copyright (c) 2018 Adriano Raiano
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
